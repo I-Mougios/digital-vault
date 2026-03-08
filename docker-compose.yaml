@@ -1,0 +1,26 @@
+services:
+  dv-mongo:
+    image: mongo:latest
+    container_name: dv-mongo
+    restart: always
+    volumes:
+      - dv-data:/data/db
+      - ./configurations/init-mongodb.js:/docker-entrypoint-initdb.d/init-db.js:ro
+    ports:
+      - "27017:27017"
+    env_file:
+      src/configurations/.env
+    healthcheck:
+      test: >
+        sh -c 'mongosh --quiet 
+        -u "$$MONGO_INITDB_ROOT_USERNAME" 
+        -p "$$MONGO_INITDB_ROOT_PASSWORD" 
+        --authenticationDatabase admin 
+        --eval "db.adminCommand(\"ping\")"'
+      interval: 10s   # How often to check
+      timeout: 10s    # How long to wait for a response
+      retries: 3     # How many failures before marking "unhealthy"
+      start_period: 5s # Give it 5 seconds to boot before starting checks
+
+volumes:
+  dv-data:

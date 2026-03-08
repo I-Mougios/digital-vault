@@ -1,0 +1,26 @@
+---
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  dict_formatter:
+    "()": pyutils.log_utils.DictFormatter
+
+
+handlers:
+  mongo_handler:
+    class: pyutils.log_utils.TestMongoHandler
+    formatter: dict_formatter
+
+loggers:
+  root:
+    level: DEBUG
+
+  mongo_logger:
+    level: ERROR
+    handlers:
+      - mongo_handler
+
+
+
+
