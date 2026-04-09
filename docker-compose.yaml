@@ -5,7 +5,7 @@ services:
     restart: always
     volumes:
       - dv-data:/data/db
-      - ./configurations/init-mongodb.js:/docker-entrypoint-initdb.d/init-db.js:ro
+      - .src/configurations/init-mongodb.js:/docker-entrypoint-initdb.d/init-db.js:ro
     ports:
       - "27017:27017"
     env_file:
