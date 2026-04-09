@@ -21,6 +21,9 @@ dev = [
     "icecream>=2.1.10",
     "pytest>=9.0.2",
     "ruff>=0.15.5",
+    "types-decorator>=5.2.0.20260408",
+    "types-pycurl>=7.45.7.20260408",
+    "types-pyyaml>=6.0.12.20260408",
 ]
 
 [tool.ruff]
