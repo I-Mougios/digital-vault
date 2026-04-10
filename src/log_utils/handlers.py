@@ -7,8 +7,6 @@ import typing
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from pymongo.errors import ConnectionFailure, OperationFailure, PyMongoError
 
-from configurations import mongo_host, mongo_password, mongo_port, mongo_user
-
 
 class AsyncHandler(logging.Handler):
     def __init__(self, queue_max_size: int = 1000):
@@ -22,10 +20,12 @@ class AsyncHandler(logging.Handler):
                 self._logs_queue.put_nowait(formatted_record)
             except asyncio.QueueFull:
                 # Queue is full, drop to prevent blocking the main app
-                sys.stderr.write(f"Log queue full, record {formatted_record} ignore")
+                sys.stderr.write(f"[Logging]: Log queue full, record {formatted_record} ignore\n")
             except asyncio.QueueShutDown:
                 # Application is closing, just drop the log
-                sys.stderr.write(f"Log queue was shut down, record {formatted_record} ignored")
+                sys.stderr.write(
+                    f"[Logging]: Log queue was shut down, record {formatted_record} ignored\n"
+                )
         except Exception:
             # Fallback to prevent logging from crashing the app
             pass
@@ -39,7 +39,7 @@ class AsyncMongoHandler(AsyncHandler):
         collection_name: str,
         queue_max_size: int = 1000,
         batch_size: int = 50,
-        flush_interval: int = 5,
+        flush_interval: int | float = 5,
         **kwargs,
     ):
         super().__init__(queue_max_size)
@@ -77,8 +77,7 @@ class AsyncMongoHandler(AsyncHandler):
             # This is the expected exit path when stop() is called
             pass
         except Exception as e:
-            sys.stderr.write(f"[Logging] Unexpected error in consumer: {e}\n")
-            await self.stop()
+            sys.stderr.write(f"[Logging]: Unexpected error in consumer: {e}\n")
         finally:
             # 4. Final cleanup for whatever is left in self._batch
             await self._flush_batch()
@@ -90,7 +89,7 @@ class AsyncMongoHandler(AsyncHandler):
         try:
             await self.collection.insert_many(self._batch)  # type: ignore[union-attr]
         except PyMongoError as e:
-            sys.stderr.write(f"[Logging] error insert batch of logs: {e}")
+            sys.stderr.write(f"[Logging]: error insert batch of logs: {e}\n")
         finally:
             n_remaining = len(self._batch)
             for _ in range(n_remaining):
@@ -104,7 +103,7 @@ class AsyncMongoHandler(AsyncHandler):
         try:
             await self.collection.database.command("ping")
         except (ConnectionFailure, OperationFailure) as e:
-            sys.stderr.write(f"[Logging] Failed to connect to MongoDB server: {e}\n")
+            sys.stderr.write(f"[Logging]: Failed to connect to MongoDB server: {e}\n")
 
         # Schedule the log consumer in the event loop
         self._log_listener = asyncio.create_task(self._consumer_loop())
@@ -115,8 +114,13 @@ class AsyncMongoHandler(AsyncHandler):
     async def stop(self):
         self._logs_queue.shutdown()
 
-        await self._logs_queue.join()
-        self.client.close()
+        try:
+            await asyncio.wait_for(self._logs_queue.join(), timeout=2.0)
+        except asyncio.TimeoutError:
+            pass
+
+        if self.client:
+            self.client.close()
 
         if self._log_listener and not self._log_listener.done():
             self._log_listener.cancel()
@@ -124,22 +128,3 @@ class AsyncMongoHandler(AsyncHandler):
                 await self._log_listener
             except asyncio.CancelledError:
                 pass
-
-
-class TestMongoHandler(AsyncMongoHandler):
-    def __init__(
-        self,
-        uri: str = f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/admin?authSource=admin",
-        database_name: str = "dv-notes",
-        collection_name: str = "test_logs",
-        queue_max_size: int = 1000,
-        batch_size: int = 50,
-        **kwargs,
-    ):
-        super().__init__(
-            uri=uri,
-            database_name=database_name,
-            collection_name=collection_name,
-            queue_max_size=queue_max_size,
-            batch_size=batch_size,
-        )

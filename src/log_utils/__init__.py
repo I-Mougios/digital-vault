@@ -1,14 +1,16 @@
-# src/pyutils/log_utils/__init__.py
+# src/log_utils/__init__.py
 import logging
 import logging.config
 from pathlib import Path
 
 from yaml import safe_load
 
-from .formatters import DictFormatter
-from .handlers import AsyncMongoHandler, TestMongoHandler
+from configurations import mongo_host, mongo_password, mongo_port, mongo_user
 
-__all__ = ["AsyncMongoHandler", "TestMongoHandler", "DictFormatter", "configure_loggers"]
+from .formatters import DictFormatter
+from .handlers import AsyncMongoHandler
+
+__all__ = ["AsyncMongoHandler", "DictFormatter", "configure_loggers"]
 
 
 def configure_loggers(directory: str | None = None, filename: str = "logger_config.yaml") -> dict:
@@ -31,3 +33,22 @@ def configure_loggers(directory: str | None = None, filename: str = "logger_conf
             return config
 
     raise FileNotFoundError(f"{filename} not found")
+
+
+class MongoLogger(AsyncMongoHandler):
+    def __init__(
+        self,
+        uri: str = f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/admin?authSource=admin",
+        database_name: str = "dv-notes",
+        collection_name: str = "test-logs",
+        queue_max_size: int = 100,
+        batch_size: int = 50,
+        **kwargs,
+    ):
+        super().__init__(
+            uri=uri,
+            database_name=database_name,
+            collection_name=collection_name,
+            queue_max_size=queue_max_size,
+            batch_size=batch_size,
+        )

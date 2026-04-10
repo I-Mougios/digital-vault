@@ -4,12 +4,12 @@ disable_existing_loggers: false
 
 formatters:
   dict_formatter:
-    "()": pyutils.log_utils.DictFormatter
+    "()": log_utils.DictFormatter
 
 
 handlers:
   mongo_handler:
-    class: pyutils.log_utils.TestMongoHandler
+    class: log_utils.MongoLogger
     formatter: dict_formatter
 
 loggers:
@@ -17,7 +17,7 @@ loggers:
     level: DEBUG
 
   mongo_logger:
-    level: ERROR
+    level: INFO
     handlers:
       - mongo_handler
 

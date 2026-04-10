@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from pyutils import configure_loggers, AsyncMongoHandler
+from log_utils import AsyncMongoHandler, configure_loggers
 
 mongo_logger = logging.getLogger("mongo_logger")
 
@@ -12,10 +12,7 @@ async def initialize_mongo_handler(logger: logging.Logger):
 
     configure_loggers(directory="configurations")
     # Find the first handler that is an AsyncMongoHandler
-    async_handler = next(
-        (h for h in logger.handlers if isinstance(h, AsyncMongoHandler)),
-        None
-    )
+    async_handler = next((h for h in logger.handlers if isinstance(h, AsyncMongoHandler)), None)
     if not async_handler:
         raise RuntimeError(
             "AsyncMongoHandler was not found in the logger handlers. "
@@ -31,7 +28,7 @@ async def initialize_mongo_handler(logger: logging.Logger):
 
 async def main():
     async with initialize_mongo_handler(mongo_logger):
-        for i in range(1101):
+        for i in range(102):
             if i < 100:
                 mongo_logger.info(f"Info message {i}")
             else:
