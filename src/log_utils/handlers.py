@@ -4,7 +4,7 @@ import logging
 import sys
 import typing
 
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from pymongo.errors import ConnectionFailure, OperationFailure, PyMongoError
 
 from configurations import mongo_host, mongo_password, mongo_port, mongo_user
@@ -39,34 +39,48 @@ class AsyncMongoHandler(AsyncHandler):
         collection_name: str,
         queue_max_size: int = 1000,
         batch_size: int = 50,
+        flush_interval: int = 5,
         **kwargs,
     ):
         super().__init__(queue_max_size)
-        client = AsyncIOMotorClient(uri, **kwargs)
-        db = client[database_name]
-        self.collection = db[collection_name]
+        self.uri = uri
+        self.database_name = database_name
+        self.collection_name = collection_name
         self.batch_size = batch_size
+        self.flush_interval = flush_interval
+        self.kwargs = kwargs
+
+        self.client: AsyncIOMotorClient | None = None
+        self.collection: None | AsyncIOMotorCollection = None
         self._batch: list[typing.Mapping] = []
         self._log_listener: asyncio.Task | None = None
         self._mongo_ready_event = asyncio.Event()
 
     async def _consumer_loop(self) -> None:
-        # Signal that the task has started
         self._mongo_ready_event.set()
         try:
             while True:
-                # This will raise asyncio.QueueShutDown when the queue
-                # is empty AFTER shutdown() is called in the stop() method.
-                record = await self._logs_queue.get()
+                try:
+                    record = await asyncio.wait_for(
+                        self._logs_queue.get(), timeout=self.flush_interval
+                    )
+                    self._batch.append(record)
+                except asyncio.TimeoutError:
+                    pass
 
-                self._batch.append(record)
-                if len(self._batch) >= self.batch_size:
+                if len(self._batch) >= self.batch_size or (
+                    self._batch and self._logs_queue.empty()
+                ):
                     await self._flush_batch()
 
         except (asyncio.QueueShutDown, EOFError):
+            # This is the expected exit path when stop() is called
             pass
+        except Exception as e:
+            sys.stderr.write(f"[Logging] Unexpected error in consumer: {e}\n")
+            await self.stop()
         finally:
-            # This catches any partial batch (e.g., 2 logs when batch_size is 3)
+            # 4. Final cleanup for whatever is left in self._batch
             await self._flush_batch()
 
     async def _flush_batch(self) -> None:
@@ -74,30 +88,35 @@ class AsyncMongoHandler(AsyncHandler):
             return
 
         try:
-            await self.collection.insert_many(self._batch)
+            await self.collection.insert_many(self._batch)  # type: ignore[union-attr]
         except PyMongoError as e:
             sys.stderr.write(f"[Logging] error insert batch of logs: {e}")
         finally:
-            for _ in range(len(self._batch)):
+            n_remaining = len(self._batch)
+            for _ in range(n_remaining):
                 self._logs_queue.task_done()
             self._batch.clear()
 
     async def start(self) -> None:
-        # Schedule the logs consumer in the event loop
-        self._log_listener = asyncio.create_task(self._consumer_loop())
-
-        # Start the log consumer and reassure that is actually running
-        await self._mongo_ready_event.wait()
+        self.client = AsyncIOMotorClient(self.uri, **self.kwargs)
+        self.collection = self.client[self.database_name][self.collection_name]
 
         try:
             await self.collection.database.command("ping")
         except (ConnectionFailure, OperationFailure) as e:
             sys.stderr.write(f"[Logging] Failed to connect to MongoDB server: {e}\n")
 
+        # Schedule the log consumer in the event loop
+        self._log_listener = asyncio.create_task(self._consumer_loop())
+
+        # Start the log consumer and reassure that is actually running
+        await self._mongo_ready_event.wait()
+
     async def stop(self):
         self._logs_queue.shutdown()
 
         await self._logs_queue.join()
+        self.client.close()
 
         if self._log_listener and not self._log_listener.done():
             self._log_listener.cancel()

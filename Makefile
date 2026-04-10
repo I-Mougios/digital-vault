@@ -1,4 +1,4 @@
-.PHONY: mongo-shell fmt typecheck
+.PHONY: mongo-shell format typecheck tests
 
 mongo-shell:
 	docker compose up -d --wait dv-mongo
@@ -10,4 +10,7 @@ format:
 
 typecheck:
 	uv run mypy src
+
+tests:
+	@uv run pytest -s -m "not slow"
 
