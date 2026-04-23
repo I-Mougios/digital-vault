@@ -7,8 +7,8 @@ from pymongo.errors import InvalidOperation
 
 import pytest
 
-from log_utils import AsyncMongoHandler, DictFormatter
 from configurations import mongo_host, mongo_password, mongo_port, mongo_user
+from shared_utils.logging import AsyncMongoHandler, DictFormatter
 
 
 class TestMongoLogger:

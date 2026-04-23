@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from log_utils import AsyncMongoHandler, configure_loggers
+from shared_utils.logging import AsyncMongoHandler, configure_loggers
 
 mongo_logger = logging.getLogger("mongo_logger")
 

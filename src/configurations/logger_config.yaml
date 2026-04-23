@@ -4,12 +4,12 @@ disable_existing_loggers: false
 
 formatters:
   dict_formatter:
-    "()": log_utils.DictFormatter
+    "()": shared_utils.logging.DictFormatter
 
 
 handlers:
   mongo_handler:
-    class: log_utils.MongoLogger
+    class: shared_utils.logging.MongoLogger
     formatter: dict_formatter
 
 loggers:

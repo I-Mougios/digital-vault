@@ -22,3 +22,4 @@ class DictFormatter(logging.Formatter):
     def serialize_local_timestamp(t: float) -> str:
         dt = datetime.fromtimestamp(t, UTC)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+

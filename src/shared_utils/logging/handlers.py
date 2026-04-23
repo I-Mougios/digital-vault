@@ -1,4 +1,3 @@
-# src/pyutils/log_utils/handlers.py
 import asyncio
 import logging
 import sys
@@ -128,3 +127,4 @@ class AsyncMongoHandler(AsyncHandler):
                 await self._log_listener
             except asyncio.CancelledError:
                 pass
+
