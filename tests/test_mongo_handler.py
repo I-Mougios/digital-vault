@@ -31,7 +31,7 @@ class TestMongoLogger:
 
         self.async_handler = AsyncMongoHandler(
             uri=f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/admin?authSource=admin",
-            database_name="dv-notes",
+            database_name="tests",
             collection_name="test_logs",
             queue_max_size=10,
             batch_size=5,
