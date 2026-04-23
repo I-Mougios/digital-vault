@@ -51,4 +51,3 @@ class MongoLogger(AsyncMongoHandler):
             queue_max_size=queue_max_size,
             batch_size=batch_size,
         )
-

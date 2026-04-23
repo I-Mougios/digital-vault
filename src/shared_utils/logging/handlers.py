@@ -127,4 +127,3 @@ class AsyncMongoHandler(AsyncHandler):
                 await self._log_listener
             except asyncio.CancelledError:
                 pass
-
