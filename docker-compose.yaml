@@ -9,7 +9,7 @@ services:
     ports:
       - "27017:27017"
     env_file:
-      src/configurations/.env
+      - ./src/configurations/.env
     healthcheck:
       test: >
         sh -c 'mongosh --quiet 
