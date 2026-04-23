@@ -5,7 +5,7 @@ services:
     restart: always
     volumes:
       - dv-data:/data/db
-      - .src/configurations/init-mongodb.js:/docker-entrypoint-initdb.d/init-db.js:ro
+      - ./src/configurations/init-mongodb.js:/docker-entrypoint-initdb.d/init-db.js:ro
     ports:
       - "27017:27017"
     env_file:
@@ -21,6 +21,6 @@ services:
       timeout: 10s    # How long to wait for a response
       retries: 3     # How many failures before marking "unhealthy"
       start_period: 5s # Give it 5 seconds to boot before starting checks
-
+      
 volumes:
   dv-data:

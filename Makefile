@@ -1,4 +1,4 @@
-.PHONY: mongo-shell format typecheck tests
+.PHONY: mongo-shell format typecheck tests clear
 
 mongo-shell:
 	docker compose up -d --wait dv-mongo
@@ -14,3 +14,7 @@ typecheck:
 tests:
 	@uv run pytest -s -m "not slow"
 
+clear:
+	rm -rf .pytest_cache
+	rm -rf .mypy_cache
+	rm -rf .ruff_cache
